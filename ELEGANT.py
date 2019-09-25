@@ -18,8 +18,24 @@ class ELEGANT(object):
     # 用来初始化所有的设置, 
     #   -网络部件
     #   -网络参数
-    def __init__(self):
-        break   
+    def __init__(self, args, config=config, dataset=MultiCelebADataset, \
+                 encoder=Encoder, decoder=Decoder, discriminator=discriminator):
+        
+        # 基本参数
+        self.args = args
+        self.attributes = args.attributes
+        self.n_attributes = len(self.attributes)
+        self.gpu = args.gpu
+        self.mode = args.mode
+        self.resotre = agrs.resotre
+
+        # init dataset and networks
+        self.config = config
+        self.dataset = dataset(self.attributes)
+        self.Enc = encoder()
+        self.Dec = decoder()
+        self.D1 = discriminator(self.n_attributes,self.config.nchw[-1])
+        return   
     
     # 这个是用来把参数从文件读入
     # input 
@@ -27,7 +43,7 @@ class ELEGANT(object):
     # output
     #   -暂时想到的是加载好参数的模型
     def restore_from_file(self):
-        break
+        return
     
     # 这个是用来指定模型布局在哪个设备上的
     # input
@@ -35,15 +51,15 @@ class ELEGANT(object):
     # output
     #   - None 
     def set_mode_and_gpu(self):
-        break
+        return
     
     # 不知道这个是啥 还需要研究
     def tensor2var(self, tensors, volatile):
-        break
+        return
     
     # 不知道这个是啥 还需要研究
     def get_attr_chs(self,encodings,attribute_id):
-        break
+        return
     
     # 这个应该是 generator 用来生成中间图片的
     # input 
@@ -51,7 +67,7 @@ class ELEGANT(object):
     # output
     #   -y
     def foward_G(self):
-        break
+        return
 
     # 这个是鉴别器 用来判断是不是真样本
     # input
@@ -59,32 +75,75 @@ class ELEGANT(object):
     # output
     #   -概率
     def forward_D_real_sample(self):
-        break
+        return
 
     # 这个也是鉴别器，用来判断是不是假样本
     def forward_D_fake_sample(self,detach):
-        break
+        return
 
     # 这个是为 鉴别器 来计算 loss 
     def compute_loss_D(self):
-        break
+        return
 
     # 这个是为 生成器 用来计算 loss 
     def compute_loss_D(self):
-        break
+        return
     
     # 这个应该是用中间结果 再来生成尽可能接近的初始结果
     def backward_D(self):
-        break
+        return
 
     # 这个应该是用中间结果 再来生成尽可能接近的初始结果
     def backward_G(self):
-        break
+        return
     
     # 看名字应该是用来把 归一化了的图片 重新展开成 0-255
     def img_denorm(self,img,scale=255):
-        break
+        return
     
     # 这个是用来保存训练日志的？
     def save_image_log(self, save_num=20):
-        break
+        return
+
+    # 这个应该是用来保存
+    def save_sample_images(self, save_num=5):
+        return
+
+    # 保存一些标量
+    def save_salar_log(self):
+        return
+
+    # 保存模型参数
+    def save_model(self):
+        return
+
+    # 训练的过程
+    def train(self):
+        return
+
+    # 对图片进行一些预处理
+    def transform(self,*images):
+        return
+
+    # 对特征进行交换
+    def swap(self):
+        return
+
+    # 线性调整两者的混合的比例
+    def linear(self):
+        return
+
+    # 用途不明
+    def matrix1(self):
+        return
+
+    # 用途不明
+    def matrix2(self):
+        return
+
+# 调用上述所有的函数
+def main():
+    return
+
+if __name__ == "__main__":
+    main()
