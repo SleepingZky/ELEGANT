@@ -162,7 +162,7 @@ class ELEGANT(object):
         else:
             return out
 
-    # 不知道这个是啥 还需要研究
+    # 这个用来得到特征对应的编码的位置
     def get_attr_chs(self,encodings,attribute_id):
         num_chs = encodings.size(1)
         # 认为每个特征平均的分配几个信息位
@@ -202,48 +202,121 @@ class ELEGANT(object):
     # output
     #   -概率
     def forward_D_real_sample(self):
-        return
+        self.d1_A = self.D1(self.A, self.y_A)
+        self.d1_B = self.D1(self.B, self.y_B)
+        self.d2_A = self.D2(self.A, self.y_A)
+        self.d2_B = self.D2(self.B, self.y_B)
 
     # 这个也是鉴别器，用来判断是不是假样本
     def forward_D_fake_sample(self,detach):
-        return
+        self.y_C, self.y_D = self.y_A.clone(), self.y_B.clone()
+        self.y_C.data[:,self.attribute_id]=self.y_B.data[:,self.attribute_id]
+        self.y_D.data[:,self.attribute_id]=self.y_A.data[:,self.attribute_id]
+
+        # 这里为什么要 detach 分离出来？
+        if detach:
+            self.d1_C = self.D1(self.C.detach(), self.y_C)
+            self.d1_D = self.D1(self.D.detach(), self.y_D)
+            self.d2_C = self.D2(self.C.detach(), self.y_C)
+            self.d2_D = self.D2(self.D.detach(), self.y_D)
+        else:
+            self.d1_C = self.D1(self.C, self.y_C)
+            self.d1_D = self.D1(self.D, self.y_D)
+            self.d2_C = self.D2(self.C, self.y_C)
+            self.d2_D = self.D2(self.D, self.y_D)
 
     # 这个是为 鉴别器 来计算 loss 
     def compute_loss_D(self):
-        return
+        self.D_loss = {
+            'D1': self.adv_criterion(self.d1_A, torch.ones_like(self.d1_A)) + \
+                  self.adv_criterion(self.d1_B, torch.ones_like(self.d1_B)) + \
+                  self.adv_criterion(self.d1_C, torch.zeros_like(self.d1_C)) + \
+                  self.adv_criterion(self.d1_D, torch.zeros_like(self.d1_D)),
+            'D2': self.adv_criterion(self.d2_A, torch.ones_like(self.d2_A)) + \
+                  self.adv_criterion(self.d2_B, torch.ones_like(self.d2_B)) + \
+                  self.adv_criterion(self.d2_C, torch.zeros_like(self.d2_C)) + \
+                  self.adv_criterion(self.d2_D, torch.zeros_like(self.d2_D)),
+        }
+
+        self.loss_D = (self.D_loss['D1']+0.5*self.D_loss['D2'])/4
 
     # 这个是为 生成器 用来计算 loss 
-    def compute_loss_D(self):
-        return
-    
-    # 这个应该是用中间结果 再来生成尽可能接近的初始结果
-    def backward_D(self):
-        return
+    def compute_loss_G(self):
+        self.G_loss={
+            'reconstruction':self.recon_criterion(self.A1,self.A) + self.recon_criterion(self.B1,self.B),
+            'adv1':self.adv_criterion(self.d1_C, torch.ones_like(self.d1_C)) + \
+                   self.adv_criterion(self.d1_D, torch.ones_like(self.d1_D)),
+            'adv2':self.adv_criterion(self.d2_C, torch.ones_like(self.d2_C))  + \
+                   self.adv_criterion(self.d2_D, torch.ones_like(self.d2_D)),
+        }
+        self.loss_G = 5 * self.G_loss['reconstruction'] + self.G_loss['adv1'] + 0.5 * self.G_loss['adv2']
 
-    # 这个应该是用中间结果 再来生成尽可能接近的初始结果
+    # 把 loss 回传 然后优化D
+    def backward_D(self):
+        self.loss_D.backward()
+        self.optimizer_D.step()
+
+    # 把 loss 回传 然后优化G
     def backward_G(self):
         self.loss_G.backward()
         self.optimizer_G.step()
 
     # 看名字应该是用来把 归一化了的图片 重新展开成 0-255
     def img_denorm(self,img,scale=255):
-        return
+        return (img + 1) * scale / 2.
     
     # 这个是用来保存训练日志的？
     def save_image_log(self, save_num=20):
-        return
+        image_info = {
+            'A/img'   : self.img_denorm(self.A.data.cpu(), 1)[:save_num],
+            'B/img'   : self.img_denorm(self.B.data.cpu(), 1)[:save_num],
+            'C/img'   : self.img_denorm(self.C.data.cpu(), 1)[:save_num],
+            'D/img'   : self.img_denorm(self.D.data.cpu(), 1)[:save_num],
+            'A1/img'  : self.img_denorm(self.A1.data.cpu(), 1)[:save_num],
+            'B1/img'  : self.img_denorm(self.B1.data.cpu(), 1)[:save_num],
+            'R_A/img' : self.img_denorm(self.R_A.data.cpu(), 1)[:save_num],
+            'R_B/img' : self.img_denorm(self.R_B.data.cpu(), 1)[:save_num],
+            'R_C/img' : self.img_denorm(self.R_C.data.cpu(), 1)[:save_num],
+            'R_D/img' : self.img_denorm(self.R_D.data.cpu(), 1)[:save_num],
+        }
+        for tag,images in image_info.items():
+            for idx, image in enumerate(images):
+                self.writer.add_image(tag+'/{}_{:02d}'.format(self.attribute_id, idx), image, self.step)
 
     # 这个应该是用来保存
     def save_sample_images(self, save_num=5):
-        return
+        canvas = torch.cat((self.A, self.B, self.C, self.D, self.A1, self.B1), -1)
+        img_array = np.transpose(self.img_denorm(canvas.data.cpu().numpy()),(0,2,3,1)).astype(np.uint8)
+        for i in range(save_num):
+            Image.fromarray(img_array[i]).save(os.path.join(self.config.img_dir, 'step_{:06d}_attr_{}_{:02d}.jpg'.format(self.step, self.attribute_id, i)))
 
     # 保存一些标量
     def save_salar_log(self):
-        return
+        scalar_info = {
+            'loss_D': self.loss_D.data.cpu().numpy(),
+            'loss_G': self.loss_G.data.cpu().numpy(),
+            'G_lr'  : self.G_lr_scheduler.get_lr(),
+            'D_lr'  : self.D_lr_scheduler.get_lr(),
+        }
+
+        for key, value in self.G_loss.items():
+            # scalar_info['G_loss/' + key] = value.data[0]
+            scalar_info['G_loss/' + key] = value.item()
+
+        for key, value in self.D_loss.items():
+            # scalar_info['D_loss/' + key] = value.data[0]
+            scalar_info['D_loss/' + key] = value.item()
+
+         for tag, value in scalar_info.items():
+            self.writer.add_scalar(tag, value, self.step)
 
     # 保存模型参数
     def save_model(self):
-        return
+        reduced = lambda key: key[7:] if key.startswith('module.') else key
+        torch.save({reduced(key): val.cpu() for key, val in self.Enc.state_dict().items()}, os.path.join(self.config.model_dir, 'Enc_iter_{:06d}.pth'.format(self.step)))
+        torch.save({reduced(key): val.cpu() for key, val in self.Dec.state_dict().items()}, os.path.join(self.config.model_dir, 'Dec_iter_{:06d}.pth'.format(self.step)))
+        torch.save({reduced(key): val.cpu() for key, val in self.D1.state_dict().items()},  os.path.join(self.config.model_dir, 'D1_iter_{:06d}.pth'.format(self.step)))
+        torch.save({reduced(key): val.cpu() for key, val in self.D2.state_dict().items()},  os.path.join(self.config.model_dir, 'D2_iter_{:06d}.pth'.format(self.step)))
 
     # 训练的过程
     def train(self):
@@ -254,10 +327,40 @@ class ELEGANT(object):
             for self.attribute_id in range(self.n_attributes):
                 A, y_A = next(self.dataset.gen(self.attribute_id, True))
                 B, y_B = next(self.dataset.gen(self.attribute_id, False))
-                self.A, self.y_A, self.B, self.y_B = self.tensor2var([A,y_A,B,y_B],volatile=False)
+                self.A, self.y_A, self.B, self.y_B = self.tensor2var([A,y_A,B,y_B], volatile=False)
 
                 # forward
                 self.foward_G()
+
+                # update D
+                self.forward_D_real_sample()
+                self.forward_D_fake_sample(detach=True)
+                self.compute_loss_D()
+                self.optimizer_D.zero_grad()
+                self.backward_D()
+
+                # update G
+                self.forward_D_fake_sample(detach=False)
+                self.compute_loss_G()
+                self.optimizer_G.zero_grad()
+                self.backward_G()
+
+                if self.step % 100 == 0:
+                    self.save_image_log()
+
+                if self.step % 2000 == 0:
+                    self.save_sample_images()
+
+            print('step: %06d, loss D: %.6f, loss G: %.6f' % (self.step, self.loss_D.data.cpu().numpy(), self.loss_G.data.cpu().numpy()))
+
+            if self.step % 10 == 0:
+                self.save_scalar_log()
+
+            if self.step % 2000 == 0:
+                self.save_model()
+
+        print('Finished Training!')
+        self.writer.close()
 
 
     # 对图片进行一些预处理
