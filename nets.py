@@ -47,7 +47,7 @@ class Encoder(nn.Module):
         # 用ModuleList来包裹
         self.main = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(3,63,3,2,1,bias=True),
+                nn.Conv2d(3,64,3,2,1,bias=True),
                 Normalization(),
                 nn.LeakyReLU(negative_slope=0.2),
             ),
@@ -177,6 +177,7 @@ class Discriminator(nn.Module):
             nn.Linear(512*(self.img_size//16)*(self.img_size//16), 1),
             nn.Sigmoid(),
         )
+        # 缩小一半
         self.downsample = torch.nn.AvgPool2d(2, stride=2)
 
         # init weight
