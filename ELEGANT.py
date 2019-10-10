@@ -376,7 +376,7 @@ class ELEGANT(object):
         return
 
     # 用途不明
-    def matrix1(self):
+    def matrix1(self):  
         return
 
     # 用途不明
