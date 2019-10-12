@@ -164,7 +164,7 @@ class ELEGANT(object):
         else:
             return out
 
-    # 不知道这个是啥 还需要研究
+    # 这个用来得到特征对应的编码的位置
     def get_attr_chs(self,encodings,attribute_id):
         num_chs = encodings.size(1)
         # 认为每个特征平均的分配几个信息位
@@ -258,14 +258,14 @@ class ELEGANT(object):
         self.loss_D.backward()
         self.optimizer_D.step()
 
-    # 这个应该是用中间结果 再来生成尽可能接近的初始结果
+    # 把 loss 回传 然后优化G
     def backward_G(self):
         self.loss_G.backward()
         self.optimizer_G.step()
 
     # 看名字应该是用来把 归一化了的图片 重新展开成 0-255
     def img_denorm(self,img,scale=255):
-        return (img+1) * scale / 2
+        return (img + 1) * scale / 2.
     
     # 这个是用来保存训练日志的？
     def save_image_log(self, save_num=20):
@@ -327,7 +327,7 @@ class ELEGANT(object):
             for self.attribute_id in range(self.n_attributes):
                 A, y_A = next(self.dataset.gen(self.attribute_id, True))
                 B, y_B = next(self.dataset.gen(self.attribute_id, False))
-                self.A, self.y_A, self.B, self.y_B = self.tensor2var([A,y_A,B,y_B],volatile=False)
+                self.A, self.y_A, self.B, self.y_B = self.tensor2var([A,y_A,B,y_B], volatile=False)
 
                 # forward
                 self.foward_G()
@@ -388,7 +388,7 @@ class ELEGANT(object):
         return
 
     # 用途不明
-    def matrix1(self):
+    def matrix1(self):  
         return
 
     # 用途不明
